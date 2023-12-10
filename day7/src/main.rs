@@ -20,6 +20,7 @@ fn main() {
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Card {
+    J,
     Two,
     Three,
     Four,
@@ -29,7 +30,6 @@ enum Card {
     Eight,
     Nine,
     T,
-    J,
     Q,
     K,
     A,
@@ -62,7 +62,7 @@ struct Hand {
     hand_type: HandType,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 enum HandType {
     HighCard,
     OnePair,
@@ -77,14 +77,14 @@ impl HandType {
     fn new(cards: String) -> HandType {
         let hs: HashSet<char> = cards.chars().collect();
         let mut count = Vec::new();
-        for card in hs {
-            let n = cards.chars().filter(|c| *c == card).count();
+        for card in &hs {
+            let n = cards.chars().filter(|c| c == card).count();
             count.push((card, n));
         }
         let mut count: Vec<_> = count.iter().map(|(_, n)| n).collect();
         count.sort();
         //dbg!(&count);
-        match &count[..] {
+        let hand_type = match &count[..] {
             [5] => Self::FiveOfAKind,
             [1, 4] => Self::FourOfAKind,
             [2, 3] => Self::FullHouse,
@@ -93,6 +93,18 @@ impl HandType {
             [1, 1, 1, 2] => Self::OnePair,
             [1, 1, 1, 1, 1] => Self::HighCard,
             _ => unreachable!(),
+        };
+        let num_j = cards.chars().filter(|c| *c == 'J').count();
+        match (hand_type, num_j) {
+            (_, 0) => hand_type,
+            (Self::FourOfAKind, _) => Self::FiveOfAKind,
+            (Self::FullHouse, _) => Self::FiveOfAKind,
+            (Self::ThreeOfAKind, _) => Self::FourOfAKind,
+            (Self::TwoPair, 1) => Self::FullHouse,
+            (Self::TwoPair, 2) => Self::FourOfAKind,
+            (Self::OnePair, _) => Self::ThreeOfAKind,
+            (Self::HighCard, _) => Self::OnePair,
+            _ => hand_type,
         }
     }
 }
